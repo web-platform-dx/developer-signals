@@ -34,7 +34,7 @@ Specification: ${data.spec}
 For more details on this feature:
 
 ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
-- [web features explorer](https://web-platform-dx.github.io/web-features-explorer/${id})
+- [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
 - [webstatus.dev](https://webstatus.dev/features/${id})
 
 <!-- web-features:${id} -->`;

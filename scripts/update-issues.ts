@@ -52,7 +52,7 @@ async function getFeaturesToSkip(): Promise<Map<string, string>> {
 
   const resp = await fetch(postitionsUrl);
   if (!resp.ok) {
-    throw new Error("TODO");
+    throw new Error(`Failed to fetch ${postitionsUrl}: ${resp.statusText}`);
   }
 
   const featurePositions = await resp.json();

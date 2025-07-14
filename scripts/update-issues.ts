@@ -8,6 +8,12 @@ import { throttling } from "@octokit/plugin-throttling";
 // possible to make the matching less brittle to changes.
 const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/g;
 
+// A mapping of Mozilla and WebKit standards positions for features are
+// maintained for the web-features explorer. Use that data to skip features that
+// have a negative/oppose position, as suggested by Mozilla.
+const postitionsUrl =
+  "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
+
 async function* iterateIssues(octokit, params) {
   for await (const response of octokit.paginate.iterator(
     octokit.rest.issues.listForRepo,
@@ -40,7 +46,39 @@ ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
 <!-- web-features:${id} -->`;
 }
 
+// Get a map of features to skip with a reason for logging.
+async function getFeaturesToSkip(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+
+  const resp = await fetch(postitionsUrl);
+  if (!resp.ok) {
+    throw new Error("TODO");
+  }
+
+  const featurePositions = await resp.json();
+  for (const [feature, vendorPositions] of Object.entries(featurePositions)) {
+    let reason;
+    for (const { position, url } of Object.values(vendorPositions)) {
+      if (position === "negative" || position === "oppose") {
+        const message = `${position} position in ${url}`;
+        if (reason) {
+          reason = `${reason}; ${message}`;
+        } else {
+          reason = message;
+        }
+      }
+    }
+    if (reason) {
+      map.set(feature, reason);
+    }
+  }
+
+  return map;
+}
+
 async function update() {
+  const skipFeatures = await getFeaturesToSkip();
+
   const ThrottlingOctokit = Octokit.plugin(throttling);
 
   const octokit = new ThrottlingOctokit({
@@ -83,6 +121,12 @@ async function update() {
   // first. This matters mostly for the initial batch creation of issues.
 
   for (const [id, data] of Object.entries(features)) {
+    const skipReason = skipFeatures.get(id);
+    if (skipReason) {
+      console.log(`Skipping ${id}. Reason: ${skipReason}`);
+      continue;
+    }
+
     if (data.status.baseline === "high") {
       // TODO: close issues for features as they reach Baseline widely available?
       continue;

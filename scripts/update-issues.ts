@@ -142,7 +142,7 @@ async function update() {
         // web-features or if we change the format of the issue body.
         await octokit.rest.issues.update({
           ...params,
-          issue_number: issue.data.issue_number,
+          issue_number: issue.number,
           title,
           body,
         });

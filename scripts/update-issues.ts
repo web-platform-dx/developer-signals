@@ -127,8 +127,8 @@ async function update() {
       continue;
     }
 
-    if (data.status.baseline === "high") {
-      // TODO: close issues for features as they reach Baseline widely available?
+    if (data.status.baseline) {
+      console.log(`Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`);
       continue;
     }
 
@@ -157,6 +157,8 @@ async function update() {
       });
     }
   }
+
+  // TODO: close open issues that were skipped / not updated.
 }
 
 await update();

@@ -36,13 +36,14 @@ function escape(s) {
 function issueBody(id, data) {
   return `${data.description_html}
 
-Specification: ${data.spec}
+If you're a web developer and want this feature to be available in all browsers, please give this issue a thumbs up 👍!
 
 For more details on this feature:
 
 ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
 - [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
 - [webstatus.dev](https://webstatus.dev/features/${id})
+- [Specification](${data.spec})
 
 <!-- web-features:${id} -->`;
 }

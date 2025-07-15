@@ -178,6 +178,8 @@ async function update() {
           title,
           body,
         });
+      } else {
+        console.log(`Issue for ${id} is up-to-date.`);
       }
     } else {
       // Create a new issue.

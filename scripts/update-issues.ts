@@ -31,10 +31,6 @@ async function* iterateIssues(octokit, params) {
   }
 }
 
-function escape(s) {
-  return s.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
-}
-
 function issueBody(id, data) {
   return `${data.description_html}
 
@@ -163,7 +159,7 @@ async function update() {
       continue;
     }
 
-    const title = escape(data.name);
+    const title = data.name;
     const body = issueBody(id, data);
 
     const issue = openIssues.get(id);

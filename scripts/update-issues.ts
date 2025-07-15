@@ -9,7 +9,7 @@ const dryRun = process.argv.includes("--dry-run");
 // A special comment in the issue body is used to store the web-features
 // ID, <!-- web-features:some-feature -->. Whitespace is allowed wherever
 // possible to make the matching less brittle to changes.
-const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/g;
+const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 
 // A mapping of Mozilla and WebKit standards positions for features are
 // maintained for the web-features explorer. Use that data to skip features that

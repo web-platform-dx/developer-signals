@@ -22,6 +22,7 @@ async function* iterateIssues(octokit, params) {
     octokit.rest.issues.listForRepo,
     {
       ...params,
+      labels: ["feature"],
       per_page: 100,
     },
   )) {
@@ -105,7 +106,6 @@ async function update() {
   const params = {
     owner: "web-platform-dx",
     repo: "developer-signals",
-    labels: ["feature"]
   };
 
   // Iterate existing issues and create a map from web-features ID to
@@ -181,6 +181,7 @@ async function update() {
           issue_number: issue.number,
           title,
           body,
+          // Labels are not updated to avoid removing labels added manually.
         });
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
@@ -196,6 +197,7 @@ async function update() {
         ...params,
         title,
         body,
+        labels: ["feature"],
       });
     }
   }

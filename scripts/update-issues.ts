@@ -1,4 +1,5 @@
 import { features } from "web-features";
+import bcd from "@mdn/browser-compat-data" with { type: 'json' };
 
 import { Octokit } from "@octokit/rest";
 import { throttling } from "@octokit/plugin-throttling";
@@ -117,10 +118,31 @@ async function update() {
     }
   }
 
-  // TODO: sort features by age so that issues for older features are created
-  // first. This matters mostly for the initial batch creation of issues.
-
+  // Sort features by earliest release date in any browser, using subsequent shipping
+  // dates as tie breakers. Features that aren't shipped in any browser come last.
+  const sortKeys = new Map<string, string>();
   for (const [id, data] of Object.entries(features)) {
+    const dates: string[] = [];
+    for (const [browser, version] of Object.entries(data.status.support)) {
+      const date = bcd.browsers[browser].releases[version.replace('≤', '')]?.release_date;
+      if (date) {
+        dates.push(date);
+      }
+    }
+    // Add a date-like string that will sort after any real date as a tiebreaker
+    // when N dates are the same and one feature has more than N dates. This
+    // also ensures that features that aren't shipped sort last.
+    dates.push('9999-99-99');
+    dates.sort();
+    sortKeys.set(id, dates.join('+'));
+  }
+  const sortedIds = Object.keys(features).sort((a, b) => {
+    return sortKeys.get(a).localeCompare(sortKeys.get(b));
+  });
+
+  for (const id of sortedIds) {
+    const data = features[id];
+
     const skipReason = skipFeatures.get(id);
     if (skipReason) {
       console.log(`Skipping ${id}. Reason: ${skipReason}`);

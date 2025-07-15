@@ -4,6 +4,8 @@ import bcd from "@mdn/browser-compat-data" with { type: 'json' };
 import { Octokit } from "@octokit/rest";
 import { throttling } from "@octokit/plugin-throttling";
 
+const dryRun = process.argv.includes("--dry-run");
+
 // A special comment in the issue body is used to store the web-features
 // ID, <!-- web-features:some-feature -->. Whitespace is allowed wherever
 // possible to make the matching less brittle to changes.
@@ -169,6 +171,10 @@ async function update() {
       if (issue.title !== title || issue.body !== body) {
         // Update the issue. This might happen as a result of a change in
         // web-features or if we change the format of the issue body.
+        if (dryRun) {
+          console.log(`Dry run. Would update issue for ${id}.`);
+          continue;
+        }
         console.log(`Updating issue for ${id}.`);
         await octokit.rest.issues.update({
           ...params,
@@ -179,6 +185,10 @@ async function update() {
       }
     } else {
       // Create a new issue.
+      if (dryRun) {
+        console.log(`Dry run. Would create new issue for ${id}.`);
+        continue;
+      }
       console.log(`Creating new issue for ${id}.`);
       await octokit.rest.issues.create({
         ...params,

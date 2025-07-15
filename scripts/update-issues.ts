@@ -114,7 +114,11 @@ async function update() {
   for await (const issue of iterateIssues(octokit, params)) {
     const m = pattern.exec(issue.body);
     if (m) {
-      openIssues.set(m[1], issue);
+      const id = m[1];
+      if (openIssues.has(id)) {
+        throw new Error(`Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`);
+      }
+      openIssues.set(id, issue);
     }
   }
 

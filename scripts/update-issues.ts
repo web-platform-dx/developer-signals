@@ -149,6 +149,11 @@ async function update() {
       continue;
     }
 
+    if (data.discouraged) {
+      console.log(`Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`);
+      continue;
+    }
+
     if (data.status.baseline) {
       console.log(`Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`);
       continue;

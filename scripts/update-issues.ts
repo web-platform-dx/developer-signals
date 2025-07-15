@@ -106,6 +106,7 @@ async function update() {
   const params = {
     owner: "web-platform-dx",
     repo: "developer-signals",
+    labels: "feature"
   };
 
   // Iterate existing issues and create a map from web-features ID to

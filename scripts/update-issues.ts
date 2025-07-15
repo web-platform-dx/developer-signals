@@ -105,7 +105,7 @@ async function update() {
   const params = {
     owner: "web-platform-dx",
     repo: "developer-signals",
-    labels: "feature"
+    labels: ["feature"]
   };
 
   // Iterate existing issues and create a map from web-features ID to
@@ -190,7 +190,6 @@ async function update() {
         ...params,
         title,
         body,
-        labels: ["feature"],
       });
     }
   }

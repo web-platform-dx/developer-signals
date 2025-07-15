@@ -167,6 +167,7 @@ async function update() {
       if (issue.title !== title || issue.body !== body) {
         // Update the issue. This might happen as a result of a change in
         // web-features or if we change the format of the issue body.
+        console.log(`Updating issue for ${id}.`);
         await octokit.rest.issues.update({
           ...params,
           issue_number: issue.number,
@@ -176,6 +177,7 @@ async function update() {
       }
     } else {
       // Create a new issue.
+      console.log(`Creating new issue for ${id}.`);
       await octokit.rest.issues.create({
         ...params,
         title,

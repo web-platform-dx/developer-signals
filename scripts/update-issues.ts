@@ -151,6 +151,11 @@ async function update() {
   for (const id of sortedIds) {
     const data = features[id];
 
+    if (!data) {
+      console.log(`Skipping ${id}. Reason: not in web-features`);
+      continue;
+    }
+
     const skipReason = skipFeatures.get(id);
     if (skipReason) {
       console.log(`Skipping ${id}. Reason: ${skipReason}`);

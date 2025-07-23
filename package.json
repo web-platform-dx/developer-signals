@@ -29,7 +29,7 @@
     "prettier": "^3.2.5",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
-    "web-features": "^2.37.0",
+    "web-features": "^2.42.0",
     "yaml": "^2.4.0"
   }
 }

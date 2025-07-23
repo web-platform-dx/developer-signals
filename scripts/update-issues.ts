@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { features } from "web-features";
 import bcd from "@mdn/browser-compat-data" with { type: 'json' };
 
@@ -108,9 +109,12 @@ async function update() {
     repo: "developer-signals",
   };
 
+  // Build up a manifest mapping ID to issue.
+  const manifest = new Map<string, object>();
+
   // Iterate existing issues and create a map from web-features ID to
   // the issue. This is in order to not create duplicate issues.
-  const openIssues = new Map();
+  const openIssues = new Map<string, any>();
   for await (const issue of iterateIssues(octokit, params)) {
     const m = pattern.exec(issue.body);
     if (m) {
@@ -186,6 +190,11 @@ async function update() {
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
       }
+      manifest.set(id, {
+        url: issue.html_url,
+        // Only count 👍 reactions as "votes".
+        votes: issue.reactions['+1'],
+      });
     } else {
       // Create a new issue.
       if (dryRun) {
@@ -193,14 +202,25 @@ async function update() {
         continue;
       }
       console.log(`Creating new issue for ${id}.`);
-      await octokit.rest.issues.create({
+      const response = await octokit.rest.issues.create({
         ...params,
         title,
         body,
         labels: ["feature"],
       });
+      manifest.set(id, {
+        url: response.data.html_url,
+        votes: 0,
+      });
     }
   }
+
+  // Serialize the manifest to a JSON object with sorted keys.
+  const ids = Array.from(manifest.keys()).sort();
+  const manifestJson = JSON.stringify(
+    Object.fromEntries(ids.map((id) => [id, manifest.get(id)])));
+  await writeFile("manifest.json", manifestJson);
+  console.log('Wrote manifest.json');
 
   // TODO: close open issues that were skipped / not updated.
 }

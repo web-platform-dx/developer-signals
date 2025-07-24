@@ -1,5 +1,8 @@
 name: update-issues
 on:
+  # Runs daily at 05:55 UTC, or manually triggered
+  schedule:
+    - cron: "55 5 * * *"
   workflow_dispatch:
 jobs:
   build:

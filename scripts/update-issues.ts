@@ -233,8 +233,8 @@ async function update() {
   const ids = Array.from(manifest.keys()).sort();
   const manifestJson = JSON.stringify(
     Object.fromEntries(ids.map((id) => [id, manifest.get(id)])));
-  await writeFile("manifest.json", manifestJson);
-  console.log('Wrote manifest.json');
+  await writeFile("web-features-signals.json", manifestJson);
+  console.log('Wrote web-features-signals.json');
 
   // TODO: close open issues that were skipped / not updated.
 }

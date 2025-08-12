@@ -12,14 +12,17 @@ const dryRun = process.argv.includes("--dry-run");
 // possible to make the matching less brittle to changes.
 const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 
-// A mapping of Mozilla and WebKit standards positions for features are
-// maintained for the web-features explorer. Use that data to skip features that
-// have a negative/oppose position, as suggested by Mozilla.
+// Features with negative standards positions are very unlikely to ever progress
+// to Baseline, and we made a decision not to collect dev signals about them
+// here on this repo. If any of the features we iterate on in this script has a
+// standards position that matches the below strings, we skip the feature. Note
+// that Mozilla uses "negative" while WebKit uses "oppose".
 //
 // TODO: Migrate to https://github.com/web-platform-dx/web-features-mappings/
 // once that is published to NPM.
 const postitionsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
+const positionsToIgnore = ["negative", "oppose"];
 
 async function* iterateIssues(octokit, params) {
   for await (const response of octokit.paginate.iterator(
@@ -64,7 +67,7 @@ async function getFeaturesToSkip(): Promise<Map<string, string>> {
   for (const [feature, vendorPositions] of Object.entries(featurePositions)) {
     let reason;
     for (const { position, url } of Object.values(vendorPositions)) {
-      if (position === "negative" || position === "oppose") {
+      if (positionsToIgnore.includes(position)) {
         const message = `${position} position at ${url}`;
         if (reason) {
           reason = `${reason}; ${message}`;

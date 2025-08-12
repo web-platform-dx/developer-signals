@@ -15,6 +15,9 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 // A mapping of Mozilla and WebKit standards positions for features are
 // maintained for the web-features explorer. Use that data to skip features that
 // have a negative/oppose position, as suggested by Mozilla.
+//
+// TODO: Migrate to https://github.com/web-platform-dx/web-features-mappings/
+// once that is published to NPM.
 const postitionsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
 

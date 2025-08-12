@@ -89,22 +89,25 @@ async function update() {
 
   const ThrottlingOctokit = Octokit.plugin(throttling);
 
+  // Based on https://github.com/octokit/plugin-throttling.js/blob/main/README.md
   const octokit = new ThrottlingOctokit({
     auth: process.env.GITHUB_TOKEN,
     throttle: {
       onRateLimit: (retryAfter, options, octokit, retryCount) => {
         octokit.log.warn(
-          `Rate limit hit for request ${options.method} ${options.url}`,
+          `Request quota exhausted for request ${options.method} ${options.url}`,
         );
 
-        if (retryCount < 3) {
-          octokit.log.info(`Retrying after ${retryAfter} seconds`);
+        if (retryCount < 1) {
+          // only retries once
+          octokit.log.info(`Retrying after ${retryAfter} seconds!`);
           return true;
         }
       },
       onSecondaryRateLimit: (retryAfter, options, octokit) => {
+        // does not retry, only logs a warning
         octokit.log.warn(
-          `Secondary rate limit hit for request ${options.method} ${options.url}`,
+          `SecondaryRateLimit detected for request ${options.method} ${options.url}`,
         );
       },
     },

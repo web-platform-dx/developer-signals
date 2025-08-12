@@ -65,7 +65,7 @@ async function getFeaturesToSkip(): Promise<Map<string, string>> {
     let reason;
     for (const { position, url } of Object.values(vendorPositions)) {
       if (position === "negative" || position === "oppose") {
-        const message = `${position} position in ${url}`;
+        const message = `${position} position at ${url}`;
         if (reason) {
           reason = `${reason}; ${message}`;
         } else {

@@ -40,7 +40,7 @@ async function* iterateIssues(octokit, params) {
 }
 
 function issueBody(id, data) {
-  return `_This GitHub issue is for collecting web developer signals for ${data.title}._
+  return `_This GitHub issue is for collecting web developer signals for ${data.name}._
 
 ${data.description_html}
 

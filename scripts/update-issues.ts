@@ -40,11 +40,13 @@ async function* iterateIssues(octokit, params) {
 }
 
 function issueBody(id, data) {
-  return `${data.description_html}
+  return `_This GitHub issue is for collecting web developer signals for ${data.title}._
 
-If you're a web developer and want this feature to be available in all browsers, please give this issue a thumbs up 👍!
+${data.description_html}
 
-For more details on this feature:
+If you're a web developer and you need this feature to be available in all browsers, please give this issue a thumbs up 👍 emoji reaction.
+
+To learn more about this feature:
 
 ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
 - [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})

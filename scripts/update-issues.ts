@@ -40,6 +40,8 @@ async function* iterateIssues(octokit, params) {
 }
 
 function issueBody(id, data) {
+  // TODO: include MDN links (before caniuse link) when we have web-features-mappings
+  // as a dependency (see above).
   return `_This GitHub issue is for collecting web developer signals for ${data.name}._
 
 ${data.description_html}

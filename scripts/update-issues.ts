@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { features } from "web-features";
 import bcd from "@mdn/browser-compat-data" with { type: 'json' };
 
@@ -237,6 +237,8 @@ async function update() {
   const ids = Array.from(manifest.keys()).sort();
   const manifestJson = JSON.stringify(
     Object.fromEntries(ids.map((id) => [id, manifest.get(id)])));
+  // Note: Uses recursive so that it doesn't fail if out/ exists.
+  await mkdir("out", { recursive: true });
   await writeFile("out/web-features-signals.json", manifestJson);
   console.log('Wrote web-features-signals.json');
 

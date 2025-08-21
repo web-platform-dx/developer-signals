@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { features } from "web-features";
-import bcd from "@mdn/browser-compat-data" with { type: 'json' };
+import { browsers, features } from "web-features";
 
 import { Octokit } from "@octokit/rest";
 import { throttling } from "@octokit/plugin-throttling";
@@ -145,9 +144,10 @@ async function update() {
   for (const [id, data] of Object.entries(features)) {
     const dates: string[] = [];
     for (const [browser, version] of Object.entries(data.status.support)) {
-      const date = bcd.browsers[browser].releases[version.replace('≤', '')]?.release_date;
-      if (date) {
-        dates.push(date);
+      const v = version.replace('≤', '');
+      const release = browsers[browser].releases.find((r) => r.version === v);
+      if (release) {
+        dates.push(release.date);
       }
     }
     // Add a date-like string that will sort after any real date as a tiebreaker

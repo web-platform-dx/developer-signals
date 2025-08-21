@@ -20,7 +20,6 @@
     "update-issues": "tsx scripts/update-issues.ts"
   },
   "devDependencies": {
-    "@mdn/browser-compat-data": "^6.0.31",
     "@octokit/plugin-throttling": "^11.0.1",
     "@octokit/rest": "^22.0.0",
     "@types/node": "^18.19.18",

@@ -19,7 +19,7 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 //
 // TODO: Migrate to https://github.com/web-platform-dx/web-features-mappings/
 // once that is published to NPM.
-const postitionsUrl =
+const positionsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
 const positionsToIgnore = ["negative", "oppose"];
 
@@ -61,9 +61,9 @@ ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
 async function getFeaturesToSkip(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
 
-  const resp = await fetch(postitionsUrl);
+  const resp = await fetch(positionsUrl);
   if (!resp.ok) {
-    throw new Error(`Failed to fetch ${postitionsUrl}: ${resp.statusText}`);
+    throw new Error(`Failed to fetch ${positionsUrl}: ${resp.statusText}`);
   }
 
   const featurePositions = await resp.json();

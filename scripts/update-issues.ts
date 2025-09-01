@@ -45,7 +45,7 @@ function issueBody(id, data) {
 
 ${data.description_html}
 
-If you're a web developer and you need this feature to be available in all browsers, please give this issue a thumbs up 👍 emoji reaction.
+If you're a web developer and you need this feature to be available in all browsers, please give this issue a thumbs up 👍 reaction.
 
 To learn more about this feature:
 

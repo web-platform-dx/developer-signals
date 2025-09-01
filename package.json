@@ -22,7 +22,7 @@
   "devDependencies": {
     "@octokit/plugin-throttling": "^11.0.1",
     "@octokit/rest": "^22.0.0",
-    "@types/node": "^18.19.18",
+    "@types/node": "^24.3.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
     "prettier": "^3.2.5",

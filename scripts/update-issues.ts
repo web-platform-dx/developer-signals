@@ -132,7 +132,9 @@ async function update() {
     if (m) {
       const id = m[1];
       if (openIssues.has(id)) {
-        throw new Error(`Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`);
+        throw new Error(
+          `Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`,
+        );
       }
       openIssues.set(id, issue);
     }
@@ -144,7 +146,7 @@ async function update() {
   for (const [id, data] of Object.entries(features)) {
     const dates: string[] = [];
     for (const [browser, version] of Object.entries(data.status.support)) {
-      const v = version.replace('≤', '');
+      const v = version.replace("≤", "");
       const release = browsers[browser].releases.find((r) => r.version === v);
       if (release) {
         dates.push(release.date);
@@ -153,9 +155,9 @@ async function update() {
     // Add a date-like string that will sort after any real date as a tiebreaker
     // when N dates are the same and one feature has more than N dates. This
     // also ensures that features that aren't shipped sort last.
-    dates.push('9999-99-99');
+    dates.push("9999-99-99");
     dates.sort();
-    sortKeys.set(id, dates.join('+'));
+    sortKeys.set(id, dates.join("+"));
   }
   const sortedIds = Object.keys(features).sort((a, b) => {
     return sortKeys.get(a).localeCompare(sortKeys.get(b));
@@ -176,12 +178,16 @@ async function update() {
     }
 
     if (data.discouraged) {
-      console.log(`Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`);
+      console.log(
+        `Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`,
+      );
       continue;
     }
 
     if (data.status.baseline) {
-      console.log(`Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`);
+      console.log(
+        `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
+      );
       continue;
     }
 
@@ -211,7 +217,7 @@ async function update() {
       manifest.set(id, {
         url: issue.html_url,
         // Only count 👍 reactions as "votes".
-        votes: issue.reactions['+1'],
+        votes: issue.reactions["+1"],
       });
     } else {
       // Create a new issue.
@@ -236,11 +242,12 @@ async function update() {
   // Serialize the manifest to a JSON object with sorted keys.
   const ids = Array.from(manifest.keys()).sort();
   const manifestJson = JSON.stringify(
-    Object.fromEntries(ids.map((id) => [id, manifest.get(id)])));
+    Object.fromEntries(ids.map((id) => [id, manifest.get(id)])),
+  );
   // Note: Uses recursive so that it doesn't fail if out/ exists.
   await mkdir("out", { recursive: true });
   await writeFile("out/web-features-signals.json", manifestJson);
-  console.log('Wrote web-features-signals.json');
+  console.log("Wrote web-features-signals.json");
 
   // TODO: close open issues that were skipped / not updated.
 }

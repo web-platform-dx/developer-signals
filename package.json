@@ -22,7 +22,7 @@
     "@octokit/rest": "^22.0.0",
     "prettier": "^3.2.5",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9.2",
     "web-features": "^2.45.0"
   }
 }

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { browsers, features } from "web-features";
+import dedent from "dedent";
 
 import { Octokit } from "@octokit/rest";
 import { throttling } from "@octokit/plugin-throttling";
@@ -68,20 +69,42 @@ async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
 function issueBody(id: string, data: (typeof features)[string]) {
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).
-  return `_This GitHub issue is for collecting web developer signals for ${data.name}._
+  return dedent`
+    _This GitHub issue is for collecting web developer signals for ${data.name}._
 
-${data.description_html}
+    ${data.description_html}
 
-If you're a web developer and you need this feature to be available in all browsers, please give this issue a thumbs up 👍 emoji reaction.
+    To learn more about this feature:
 
-To learn more about this feature:
+    ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
+    - [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
+    - [webstatus.dev](https://webstatus.dev/features/${id})
+    - [Specification](${data.spec})
 
-${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
-- [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
-- [webstatus.dev](https://webstatus.dev/features/${id})
-- [Specification](${data.spec})
+    ## Give us feedback
 
-<!-- web-features:${id} -->`;
+    If you're pressed for time, but you want this feature to be available in all browsers, please give this issue a thumbs up 👍 emoji reaction.
+
+    However, a much better guide for us is to know how you'd use this feature, and what you're having to do in the meantime.
+    This helps us judge the priority versus other features.
+
+    Copy the template below in a comment, and add the details that matter to _you_.
+
+    \`\`\`md
+    ## What I want to do with this feature
+
+    <!-- Add your specific use-cases, even if they seem obvious to you. -->
+
+    ## What I'm having to do in the meantime
+
+    <!--
+    Are you having to use another feature instead, a polyfill, or is it blocking you completely?
+    Why are the alternatives worse than using this feature?
+    -->
+    \`\`\`
+
+    <!-- web-features:${id} -->
+  `;
 }
 
 // Get a map of features to skip with a reason for logging.

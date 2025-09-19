@@ -66,7 +66,22 @@ async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
   }
 }
 
+const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+
 function issueBody(id: string, data: (typeof features)[string]) {
+  const supportLines = [];
+  for (const [browser, { name, releases }] of Object.entries(browsers)) {
+    const version = data.status.support[browser];
+    if (version) {
+      const date = releases.find((r) => r.version === version)!.date;
+      const dateString = dateFormat.format(new Date(date));
+      supportLines.push(`${name} ${version} (${dateString})`);
+    } else {
+      supportLines.push(`${name}: not supported`);
+    }
+  }
+  const supportBlock = supportLines.map((l) => `- ${l}`).join("\n");
+
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).
   return dedent`
@@ -74,12 +89,9 @@ function issueBody(id: string, data: (typeof features)[string]) {
 
     ${data.description_html}
 
-    To learn more about this feature:
+    ## Browser support
 
-    ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
-    - [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
-    - [webstatus.dev](https://webstatus.dev/features/${id})
-    - [Specification](${data.spec})
+    ${supportBlock}
 
     ## Give us feedback
 
@@ -102,6 +114,15 @@ function issueBody(id: string, data: (typeof features)[string]) {
     Why are the alternatives worse than using this feature?
     -->
     \`\`\`
+
+    ## Learn more
+
+    You can learn more about this feature here:
+
+    ${data.caniuse ? `- [caniuse.com](https://caniuse.com/${data.caniuse})` : ""}
+    - [web features explorer](https://web-platform-dx.github.io/web-features-explorer/features/${id})
+    - [webstatus.dev](https://webstatus.dev/features/${id})
+    - [Specification](${data.spec})
 
     <!-- web-features:${id} -->
   `;

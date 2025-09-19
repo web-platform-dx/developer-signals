@@ -71,9 +71,10 @@ const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 function issueBody(id: string, data: (typeof features)[string]) {
   const supportLines = [];
   for (const [browser, { name, releases }] of Object.entries(browsers)) {
-    const version = data.status.support[browser];
-    if (version) {
-      const date = releases.find((r) => r.version === version)!.date;
+    const version = data.status.support[browser as keyof typeof browsers];
+    const v = version?.replace("≤", "");
+    if (v) {
+      const date = releases.find((r) => r.version === v)!.date;
       const dateString = dateFormat.format(new Date(date));
       supportLines.push(`${name} ${version} (${dateString})`);
     } else {

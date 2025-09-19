@@ -21,9 +21,36 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 // once that is published to NPM.
 const positionsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
-const positionsToIgnore = ["negative", "oppose"];
 
-async function* iterateIssues(octokit, params) {
+interface VendorPosition {
+  url?: string;
+  position?:
+    | ""
+    | "positive"
+    | "support"
+    | "oppose"
+    | "defer"
+    | "neutral"
+    | "negative"
+    | "blocked";
+}
+
+type PositionsData = Record<
+  string,
+  {
+    mozilla: VendorPosition;
+    webkit: VendorPosition;
+  }
+>;
+
+const positionsToIgnore: VendorPosition["position"][] = ["negative", "oppose"];
+
+interface IterateIssuesParams {
+  owner: string;
+  repo: string;
+}
+
+async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
   for await (const response of octokit.paginate.iterator(
     octokit.rest.issues.listForRepo,
     {
@@ -38,7 +65,7 @@ async function* iterateIssues(octokit, params) {
   }
 }
 
-function issueBody(id, data) {
+function issueBody(id: string, data: (typeof features)[string]) {
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).
   return `_This GitHub issue is for collecting web developer signals for ${data.name}._
@@ -66,11 +93,11 @@ async function getFeaturesToSkip(): Promise<Map<string, string>> {
     throw new Error(`Failed to fetch ${positionsUrl}: ${resp.statusText}`);
   }
 
-  const featurePositions = await resp.json();
+  const featurePositions = (await resp.json()) as PositionsData;
   for (const [feature, vendorPositions] of Object.entries(featurePositions)) {
     let reason;
     for (const { position, url } of Object.values(vendorPositions)) {
-      if (positionsToIgnore.includes(position)) {
+      if (position && positionsToIgnore.includes(position)) {
         const message = `${position} position at ${url}`;
         if (reason) {
           reason = `${reason}; ${message}`;
@@ -128,11 +155,28 @@ async function update() {
   // the issue. This is in order to not create duplicate issues.
   const openIssues = new Map<string, any>();
   for await (const issue of iterateIssues(octokit, params)) {
+    if (typeof issue === "string") {
+      throw Error(`Unexpected issue type (string)`);
+    }
+
+    if (
+      !("body" in issue && "html_url" in issue) ||
+      typeof issue.body !== "string" ||
+      typeof issue.html_url !== "string"
+    ) {
+      throw Error(
+        `Unexpected issue type (missing body or html_url, or not strings)`,
+      );
+    }
+
     const m = pattern.exec(issue.body);
+
     if (m) {
       const id = m[1];
       if (openIssues.has(id)) {
-        throw new Error(`Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`);
+        throw new Error(
+          `Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`,
+        );
       }
       openIssues.set(id, issue);
     }
@@ -144,8 +188,10 @@ async function update() {
   for (const [id, data] of Object.entries(features)) {
     const dates: string[] = [];
     for (const [browser, version] of Object.entries(data.status.support)) {
-      const v = version.replace('≤', '');
-      const release = browsers[browser].releases.find((r) => r.version === v);
+      const v = version.replace("≤", "");
+      const release = browsers[browser as keyof typeof browsers].releases.find(
+        (r) => r.version === v,
+      );
       if (release) {
         dates.push(release.date);
       }
@@ -153,12 +199,12 @@ async function update() {
     // Add a date-like string that will sort after any real date as a tiebreaker
     // when N dates are the same and one feature has more than N dates. This
     // also ensures that features that aren't shipped sort last.
-    dates.push('9999-99-99');
+    dates.push("9999-99-99");
     dates.sort();
-    sortKeys.set(id, dates.join('+'));
+    sortKeys.set(id, dates.join("+"));
   }
   const sortedIds = Object.keys(features).sort((a, b) => {
-    return sortKeys.get(a).localeCompare(sortKeys.get(b));
+    return sortKeys.get(a)!.localeCompare(sortKeys.get(b)!);
   });
 
   for (const id of sortedIds) {
@@ -176,12 +222,16 @@ async function update() {
     }
 
     if (data.discouraged) {
-      console.log(`Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`);
+      console.log(
+        `Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`,
+      );
       continue;
     }
 
     if (data.status.baseline) {
-      console.log(`Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`);
+      console.log(
+        `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
+      );
       continue;
     }
 
@@ -211,7 +261,7 @@ async function update() {
       manifest.set(id, {
         url: issue.html_url,
         // Only count 👍 reactions as "votes".
-        votes: issue.reactions['+1'],
+        votes: issue.reactions["+1"],
       });
     } else {
       // Create a new issue.
@@ -236,11 +286,12 @@ async function update() {
   // Serialize the manifest to a JSON object with sorted keys.
   const ids = Array.from(manifest.keys()).sort();
   const manifestJson = JSON.stringify(
-    Object.fromEntries(ids.map((id) => [id, manifest.get(id)])));
+    Object.fromEntries(ids.map((id) => [id, manifest.get(id)])),
+  );
   // Note: Uses recursive so that it doesn't fail if out/ exists.
   await mkdir("out", { recursive: true });
   await writeFile("out/web-features-signals.json", manifestJson);
-  console.log('Wrote web-features-signals.json');
+  console.log("Wrote web-features-signals.json");
 
   // TODO: close open issues that were skipped / not updated.
 }

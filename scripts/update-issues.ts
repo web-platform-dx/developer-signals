@@ -83,7 +83,7 @@ function issueBody(id: string, data: (typeof features)[string]) {
 
     ## Give us feedback
 
-    If you're pressed for time, but you want this feature to be available in all browsers, please give this issue a thumbs up 👍 emoji reaction.
+    If you're pressed for time, but you want this feature to be available in all browsers, please give this issue a thumbs up 👍 reaction.
 
     However, a much better guide for us is to know how you'd use this feature, and what you're having to do in the meantime.
     This helps us judge the priority versus other features.

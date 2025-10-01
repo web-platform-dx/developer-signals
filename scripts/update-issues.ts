@@ -293,17 +293,17 @@ async function update() {
       continue;
     }
 
-    if (data.status.baseline) {
+    const title = data.name;
+    const body = issueBody(id, data);
+    const issue = openIssues.get(id);
+    
+    if (data.status.baseline && !issue) {
       console.log(
         `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
       );
       continue;
     }
 
-    const title = data.name;
-    const body = issueBody(id, data);
-
-    const issue = openIssues.get(id);
     if (issue) {
       if (issue.title !== title || issue.body !== body) {
         // Update the issue. This might happen as a result of a change in

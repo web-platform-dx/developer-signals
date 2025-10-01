@@ -235,9 +235,20 @@ async function update() {
   // dates as tie breakers. Features that aren't shipped in any browser come last.
   const sortKeys = new Map<string, string>();
   for (const [id, data] of Object.entries(features)) {
-    // Skip moves, splits, or other non-features.
-    if (data.kind !== "feature") {
-      continue;
+    switch (data.kind) {
+      case "feature":
+        // Normal feature, handled below.
+        break;
+      case "moved":
+        // Moves are handled when populating the openIssues map.
+        continue;
+      case "split":
+        // TODO: Handle split features. The new features will be automatically
+        // created, but we should close the original feature with a comment
+        // pointing to the new ones.
+        continue;
+      default:
+        throw new Error(`Unknown feature kind: ${data.kind}`);
     }
 
     const dates: string[] = [];

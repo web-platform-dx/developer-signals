@@ -216,7 +216,12 @@ async function update() {
     const m = pattern.exec(issue.body);
 
     if (m) {
-      const id = m[1];
+      let id = m[1];
+      // If the feature has been moved, change the ID to the new ID so that this
+      // issue will be found when iterating all features.
+      if (features[id]?.kind === "moved") {
+        id = features[id].redirect_target;
+      }
       if (openIssues.has(id)) {
         throw new Error(
           `Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`,
@@ -230,6 +235,22 @@ async function update() {
   // dates as tie breakers. Features that aren't shipped in any browser come last.
   const sortKeys = new Map<string, string>();
   for (const [id, data] of Object.entries(features)) {
+    switch (data.kind) {
+      case "feature":
+        // Normal feature, handled below.
+        break;
+      case "moved":
+        // Moves are handled when populating the openIssues map.
+        continue;
+      case "split":
+        // TODO: Handle split features. The new features will be automatically
+        // created, but we should close the original feature with a comment
+        // pointing to the new ones.
+        continue;
+      default:
+        throw new Error(`Unknown feature kind: ${data.kind}`);
+    }
+
     const dates: string[] = [];
     for (const [browser, version] of Object.entries(data.status.support)) {
       const v = version.replace("≤", "");
@@ -247,7 +268,7 @@ async function update() {
     dates.sort();
     sortKeys.set(id, dates.join("+"));
   }
-  const sortedIds = Object.keys(features).sort((a, b) => {
+  const sortedIds = Array.from(sortKeys.keys()).sort((a, b) => {
     return sortKeys.get(a)!.localeCompare(sortKeys.get(b)!);
   });
 

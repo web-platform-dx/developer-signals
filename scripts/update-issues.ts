@@ -66,7 +66,10 @@ async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
   }
 }
 
-const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+const dateFormat = new Intl.DateTimeFormat("en", { 
+  dateStyle: "medium",
+  timeZone: "UTC" 
+});
 
 function issueBody(id: string, data: (typeof features)[string]) {
   const supportLines = [];

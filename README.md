@@ -21,3 +21,5 @@ A discussion on [organizing developer signals around features](https://github.co
 ## Contribute
 
 This work is exploratory and will be shaped by what we learn through experimentation. If you'd like to contribute, please file issues or send pull requests, and consider joining the [W3C WebDX Community Group](https://www.w3.org/community/webdx/)!
+
+All participants are expected to follow the project's [Code of Conduct](/CODE_OF_CONDUCT.md).

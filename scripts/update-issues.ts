@@ -285,11 +285,13 @@ async function update() {
 
     const skipReason = skipFeatures.get(id);
     if (skipReason) {
+      // TODO: Handle skipped features that already have open issues.
       console.log(`Skipping ${id}. Reason: ${skipReason}`);
       continue;
     }
 
     if (data.discouraged) {
+      // TODO: Handle skipped features that already have open issues.
       console.log(
         `Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`,
       );

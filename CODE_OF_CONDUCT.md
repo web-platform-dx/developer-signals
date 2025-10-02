@@ -8,6 +8,7 @@ In addition to the W3C Code of Conduct, we have the following project-specific e
 
 - **Focus on DX and UX:** The goal of this project is to gather and elevate signals from web developers. Frame discussions and contributions around evidence of developer needs and their potential impact on developer and user experiences.
 - **Provide Structured Feedback:** When submitting developer feedback on web features, please follow the suggested template provided in each issue. Clearly describe your specific use case and any workarounds you are currently using.
+- **Guide, Don't Debate:** This is not a forum for technical debate. When replying to another developer's use case, do so in a way that constructively clarifies and strengthens the signal. If a different feature may be a better fit for their stated problem, suggest it helpfully and without criticism.
 
 ## Reporting
 

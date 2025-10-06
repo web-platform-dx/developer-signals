@@ -115,6 +115,8 @@ function issueBody(id: string, data: (typeof features)[string]) {
     -->
     \`\`\`
 
+    All comments are expected to adhere to the [Code of Conduct](/CODE_OF_CONDUCT.md).
+
     ## Learn more
 
     You can learn more about this feature here:

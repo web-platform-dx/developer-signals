@@ -66,7 +66,10 @@ async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
   }
 }
 
-const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+const dateFormat = new Intl.DateTimeFormat("en", { 
+  dateStyle: "medium",
+  timeZone: "UTC" 
+});
 
 function issueBody(id: string, data: (typeof features)[string]) {
   const supportLines = [];
@@ -284,28 +287,30 @@ async function update() {
 
     const skipReason = skipFeatures.get(id);
     if (skipReason) {
+      // TODO: Handle skipped features that already have open issues.
       console.log(`Skipping ${id}. Reason: ${skipReason}`);
       continue;
     }
 
     if (data.discouraged) {
+      // TODO: Handle skipped features that already have open issues.
       console.log(
         `Skipping ${id}. Reason: Discouraged according to ${data.discouraged.according_to[0]}`,
       );
       continue;
     }
 
-    if (data.status.baseline) {
+    const title = data.name;
+    const body = issueBody(id, data);
+    const issue = openIssues.get(id);
+    
+    if (data.status.baseline && !issue) {
       console.log(
         `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
       );
       continue;
     }
 
-    const title = data.name;
-    const body = issueBody(id, data);
-
-    const issue = openIssues.get(id);
     if (issue) {
       if (issue.title !== title || issue.body !== body) {
         // Update the issue. This might happen as a result of a change in

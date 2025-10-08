@@ -18,14 +18,15 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 // standards position that matches the below strings, we skip the feature. Note
 // that Mozilla uses "negative" while WebKit uses "oppose".
 //
-// TODO: Migrate to https://github.com/web-platform-dx/web-features-mappings/
-// once that is published to NPM.
-const positionsUrl =
-  "https://raw.githubusercontent.com/web-platform-dx/web-features-explorer/refs/heads/main/additional-data/standard-positions.json";
+// TODO: Migrate to NPM package once published:
+// https://github.com/web-platform-dx/web-features-mappings/issues/5
+const mappingsUrl =
+  "https://raw.githubusercontent.com/web-platform-dx/web-features-mappings/refs/heads/main/mappings/combined-data.json";
 
 interface VendorPosition {
-  url?: string;
-  position?:
+  vendor: "mozilla" | "webkit";
+  url: string;
+  position:
     | ""
     | "positive"
     | "support"
@@ -36,11 +37,10 @@ interface VendorPosition {
     | "blocked";
 }
 
-type PositionsData = Record<
+type MappingsData = Record<
   string,
   {
-    mozilla: VendorPosition;
-    webkit: VendorPosition;
+    "standards-positions"?: VendorPosition[];
   }
 >;
 
@@ -66,9 +66,9 @@ async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
   }
 }
 
-const dateFormat = new Intl.DateTimeFormat("en", { 
+const dateFormat = new Intl.DateTimeFormat("en", {
   dateStyle: "medium",
-  timeZone: "UTC" 
+  timeZone: "UTC",
 });
 
 function issueBody(id: string, data: (typeof features)[string]) {
@@ -137,17 +137,21 @@ function issueBody(id: string, data: (typeof features)[string]) {
 async function getFeaturesToSkip(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
 
-  const resp = await fetch(positionsUrl);
+  const resp = await fetch(mappingsUrl);
   if (!resp.ok) {
-    throw new Error(`Failed to fetch ${positionsUrl}: ${resp.statusText}`);
+    throw new Error(`Failed to fetch ${mappingsUrl}: ${resp.statusText}`);
   }
 
-  const featurePositions = (await resp.json()) as PositionsData;
-  for (const [feature, vendorPositions] of Object.entries(featurePositions)) {
+  const mappings = (await resp.json()) as MappingsData;
+  for (const [feature, data] of Object.entries(mappings)) {
+    const positions = data["standards-positions"];
+    if (!positions) {
+      continue;
+    }
     let reason;
-    for (const { position, url } of Object.values(vendorPositions)) {
+    for (const { vendor, position, url } of positions) {
       if (position && positionsToIgnore.includes(position)) {
-        const message = `${position} position at ${url}`;
+        const message = `${vendor} position is ${position}: ${url}`;
         if (reason) {
           reason = `${reason}; ${message}`;
         } else {
@@ -303,7 +307,7 @@ async function update() {
     const title = data.name;
     const body = issueBody(id, data);
     const issue = openIssues.get(id);
-    
+
     if (data.status.baseline && !issue) {
       console.log(
         `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,

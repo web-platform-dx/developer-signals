@@ -321,19 +321,51 @@ async function update() {
         // web-features or if we change the format of the issue body.
         if (dryRun) {
           console.log(`Dry run. Would update issue for ${id}.`);
-          continue;
+        } else {
+          console.log(`Updating issue for ${id}.`);
+          await octokit.rest.issues.update({
+            ...params,
+            issue_number: issue.number,
+            title,
+            body,
+            // Labels are not updated to avoid removing labels added manually.
+          });
         }
-        console.log(`Updating issue for ${id}.`);
-        await octokit.rest.issues.update({
-          ...params,
-          issue_number: issue.number,
-          title,
-          body,
-          // Labels are not updated to avoid removing labels added manually.
-        });
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
       }
+      
+      if (data.status.baseline) {
+        // The feature has reached Baseline status since this issue was opened, so we should close it.
+        const closeComment = dedent`
+          This feature reached Baseline status on ${dateFormat.format(new Date(data.status.baseline_low_date))}, which means it's now fully supported across browsers. Developer signals are no longer needed for this feature, so this issue can be closed.
+
+          Thank you to everyone who provided feedback! 🎉
+        `;
+
+        if (dryRun) {
+          console.log(`Dry run. Would close issue for ${id} with comment.`);
+        } else {
+          console.log(`Closing issue for ${id} with comment.`);
+          
+          // Post the comment
+          await octokit.rest.issues.createComment({
+            ...params,
+            issue_number: issue.number,
+            body: closeComment,
+          });
+          
+          // Close the issue
+          await octokit.rest.issues.update({
+            ...params,
+            issue_number: issue.number,
+            state: "closed",
+          });
+        }
+        
+        continue;
+      }
+      
       manifest.set(id, {
         url: issue.html_url,
         // Only count 👍 reactions as "votes".

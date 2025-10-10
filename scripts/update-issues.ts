@@ -23,6 +23,9 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 const mappingsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-mappings/refs/heads/main/mappings/combined-data.json";
 
+const imgDir =
+  "https://raw.githubusercontent.com/web-platform-dx/developer-signals/refs/heads/main/img";
+
 interface VendorPosition {
   vendor: "mozilla" | "webkit";
   url: string;
@@ -72,10 +75,14 @@ const dateFormat = new Intl.DateTimeFormat("en", {
 });
 
 function issueBody(id: string, data: (typeof features)[string]) {
+  const supportSummary: Record<string, boolean> = {};
   const supportLines = [];
   for (const [browser, { name, releases }] of Object.entries(browsers)) {
     const version = data.status.support[browser as keyof typeof browsers];
     const v = version?.replace("≤", "");
+    const vendor = browser.split("_")[0];
+    supportSummary[vendor] ??= true;
+    supportSummary[vendor] = supportSummary[vendor] && !!v;
     if (v) {
       const date = releases.find((r) => r.version === v)!.date;
       const dateString = dateFormat.format(new Date(date));
@@ -84,7 +91,17 @@ function issueBody(id: string, data: (typeof features)[string]) {
       supportLines.push(`${name}: not supported`);
     }
   }
-  const supportBlock = supportLines.map((l) => `- ${l}`).join("\n");
+  const supportIcons = Object.entries(supportSummary).map(([vendor, available]) => {
+    const availability = available ? "available" : "unavailable";
+    return `<img src="${imgDir}/${vendor}.svg" alt="${vendor}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
+  });
+  const supportBlock = dedent`
+    <details>
+    <summary>${supportIcons.join(" ")}</summary>
+
+    ${supportLines.map((l) => `- ${l}`).join("\n")}
+    </details>
+  `;
 
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).

@@ -81,8 +81,8 @@ function issueBody(id: string, data: (typeof features)[string]) {
     const version = data.status.support[browser as keyof typeof browsers];
     const v = version?.replace("≤", "");
     const baseBrowser = browser.split("_")[0]; // browser without OS
-    supportSummary[vendor] ??= true;
-    supportSummary[vendor] = supportSummary[vendor] && !!v;
+    supportSummary[baseBrowser] ??= true;
+    supportSummary[baseBrowser] = supportSummary[baseBrowser] && !!v;
     if (v) {
       const date = releases.find((r) => r.version === v)!.date;
       const dateString = dateFormat.format(new Date(date));
@@ -91,9 +91,9 @@ function issueBody(id: string, data: (typeof features)[string]) {
       supportLines.push(`${name}: not supported`);
     }
   }
-  const supportIcons = Object.entries(supportSummary).map(([vendor, available]) => {
+  const supportIcons = Object.entries(supportSummary).map(([browser, available]) => {
     const availability = available ? "available" : "unavailable";
-    return `<img src="${imgDir}/${vendor}.svg" alt="${vendor}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
+    return `<img src="${imgDir}/${browser}.svg" alt="${browser}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
   });
   const supportBlock = dedent`
     <details>

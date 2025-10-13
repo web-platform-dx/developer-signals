@@ -80,7 +80,7 @@ function issueBody(id: string, data: (typeof features)[string]) {
   for (const [browser, { name, releases }] of Object.entries(browsers)) {
     const version = data.status.support[browser as keyof typeof browsers];
     const v = version?.replace("≤", "");
-    const vendor = browser.split("_")[0];
+    const baseBrowser = browser.split("_")[0]; // browser without OS
     supportSummary[vendor] ??= true;
     supportSummary[vendor] = supportSummary[vendor] && !!v;
     if (v) {

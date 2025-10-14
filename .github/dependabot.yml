@@ -3,4 +3,12 @@ updates:
 - package-ecosystem: "npm"
   directory: "/"
   schedule:
+    interval: "daily"
+  allow:
+  - dependency-name: "web-features"
+- package-ecosystem: "npm"
+  directory: "/"
+  schedule:
     interval: "weekly"
+  ignore:
+  - dependency-name: "web-features"

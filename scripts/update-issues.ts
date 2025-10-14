@@ -23,6 +23,9 @@ const pattern = /<!--\s*web-features\s*:\s*([a-z0-9-]+)\s*-->/;
 const mappingsUrl =
   "https://raw.githubusercontent.com/web-platform-dx/web-features-mappings/refs/heads/main/mappings/combined-data.json";
 
+const imgDir =
+  "https://raw.githubusercontent.com/web-platform-dx/developer-signals/refs/heads/main/img";
+
 interface VendorPosition {
   vendor: "mozilla" | "webkit";
   url: string;
@@ -72,10 +75,14 @@ const dateFormat = new Intl.DateTimeFormat("en", {
 });
 
 function issueBody(id: string, data: (typeof features)[string]) {
+  const supportSummary: Record<string, boolean> = {};
   const supportLines = [];
   for (const [browser, { name, releases }] of Object.entries(browsers)) {
     const version = data.status.support[browser as keyof typeof browsers];
     const v = version?.replace("≤", "");
+    const baseBrowser = browser.split("_")[0]; // browser without OS
+    supportSummary[baseBrowser] ??= true;
+    supportSummary[baseBrowser] = supportSummary[baseBrowser] && !!v;
     if (v) {
       const date = releases.find((r) => r.version === v)!.date;
       const dateString = dateFormat.format(new Date(date));
@@ -84,7 +91,19 @@ function issueBody(id: string, data: (typeof features)[string]) {
       supportLines.push(`${name}: not supported`);
     }
   }
-  const supportBlock = supportLines.map((l) => `- ${l}`).join("\n");
+  const supportIcons = Object.entries(supportSummary).map(
+    ([browser, available]) => {
+      const availability = available ? "available" : "unavailable";
+      return `<img src="${imgDir}/${browser}.svg" alt="${browser}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
+    },
+  );
+  const supportBlock = dedent`
+    <details>
+    <summary>${supportIcons.join(" ")}</summary>
+
+    ${supportLines.map((l) => `- ${l}`).join("\n")}
+    </details>
+  `;
 
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).
@@ -321,19 +340,51 @@ async function update() {
         // web-features or if we change the format of the issue body.
         if (dryRun) {
           console.log(`Dry run. Would update issue for ${id}.`);
-          continue;
+        } else {
+          console.log(`Updating issue for ${id}.`);
+          await octokit.rest.issues.update({
+            ...params,
+            issue_number: issue.number,
+            title,
+            body,
+            // Labels are not updated to avoid removing labels added manually.
+          });
         }
-        console.log(`Updating issue for ${id}.`);
-        await octokit.rest.issues.update({
-          ...params,
-          issue_number: issue.number,
-          title,
-          body,
-          // Labels are not updated to avoid removing labels added manually.
-        });
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
       }
+
+      if (data.status.baseline) {
+        // The feature has reached Baseline status since this issue was opened, so we should close it.
+        const closeComment = dedent`
+          This feature reached Baseline status on ${dateFormat.format(new Date(data.status.baseline_low_date))}, which means it's now fully supported across browsers. Developer signals are no longer needed for this feature, so this issue can be closed.
+
+          Thank you to everyone who provided feedback! 🎉
+        `;
+
+        if (dryRun) {
+          console.log(`Dry run. Would close issue for ${id} with comment.`);
+        } else {
+          console.log(`Closing issue for ${id} with comment.`);
+
+          // Post the comment
+          await octokit.rest.issues.createComment({
+            ...params,
+            issue_number: issue.number,
+            body: closeComment,
+          });
+
+          // Close the issue
+          await octokit.rest.issues.update({
+            ...params,
+            issue_number: issue.number,
+            state: "closed",
+          });
+        }
+
+        continue;
+      }
+
       manifest.set(id, {
         url: issue.html_url,
         // Only count 👍 reactions as "votes".

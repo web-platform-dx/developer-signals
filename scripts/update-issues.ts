@@ -91,10 +91,12 @@ function issueBody(id: string, data: (typeof features)[string]) {
       supportLines.push(`${name}: not supported`);
     }
   }
-  const supportIcons = Object.entries(supportSummary).map(([browser, available]) => {
-    const availability = available ? "available" : "unavailable";
-    return `<img src="${imgDir}/${browser}.svg" alt="${browser}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
-  });
+  const supportIcons = Object.entries(supportSummary).map(
+    ([browser, available]) => {
+      const availability = available ? "available" : "unavailable";
+      return `<img src="${imgDir}/${browser}.svg" alt="${browser}"><img src="${imgDir}/${availability}.svg" alt="${availability}">`;
+    },
+  );
   const supportBlock = dedent`
     <details>
     <summary>${supportIcons.join(" ")}</summary>
@@ -351,7 +353,7 @@ async function update() {
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
       }
-      
+
       if (data.status.baseline) {
         // The feature has reached Baseline status since this issue was opened, so we should close it.
         const closeComment = dedent`
@@ -364,14 +366,14 @@ async function update() {
           console.log(`Dry run. Would close issue for ${id} with comment.`);
         } else {
           console.log(`Closing issue for ${id} with comment.`);
-          
+
           // Post the comment
           await octokit.rest.issues.createComment({
             ...params,
             issue_number: issue.number,
             body: closeComment,
           });
-          
+
           // Close the issue
           await octokit.rest.issues.update({
             ...params,
@@ -379,10 +381,10 @@ async function update() {
             state: "closed",
           });
         }
-        
+
         continue;
       }
-      
+
       manifest.set(id, {
         url: issue.html_url,
         // Only count 👍 reactions as "votes".

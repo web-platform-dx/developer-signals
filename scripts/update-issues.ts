@@ -4,6 +4,7 @@ import dedent from "dedent";
 
 import { Octokit } from "@octokit/rest";
 import { throttling } from "@octokit/plugin-throttling";
+import escape from "markdown-escape";
 
 const dryRun = process.argv.includes("--dry-run");
 
@@ -108,7 +109,7 @@ function issueBody(id: string, data: (typeof features)[string]) {
   // TODO: include MDN links (before caniuse link) when we have web-features-mappings
   // as a dependency (see above).
   return dedent`
-    _This GitHub issue is for collecting web developer signals for ${data.name}._
+    _This GitHub issue is for collecting web developer signals for ${escape(data.name)}._
 
     ${data.description_html}
 

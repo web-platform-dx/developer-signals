@@ -1,15 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directories:
-      - "**/*"
-    schedule:
-      interval: "daily"
-    allow:
-      - dependency-name: "web-features"
-  - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "web-features"
+      interval: "daily"
+    open-pull-requests-limit: 10

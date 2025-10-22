@@ -1,8 +1,11 @@
 name: update-issues
 on:
-  # Runs daily at 05:55 UTC, or manually triggered
+  # Runs daily at 05:55 UTC, on pushes to main, or when manually triggered
   schedule:
     - cron: "55 5 * * *"
+  push:
+    branches:
+      - main
   workflow_dispatch:
 jobs:
   build:

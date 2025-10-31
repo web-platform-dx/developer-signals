@@ -18,7 +18,7 @@
     "update-issues": "tsx scripts/update-issues.ts"
   },
   "devDependencies": {
-    "@octokit/plugin-throttling": "^11.0.2",
+    "@octokit/plugin-throttling": "^11.0.3",
     "@octokit/rest": "^22.0.0",
     "@types/node": "^24.9.1",
     "dedent": "^1.7.0",

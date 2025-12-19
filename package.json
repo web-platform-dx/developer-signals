@@ -21,7 +21,7 @@
     "@octokit/plugin-throttling": "^11.0.3",
     "@octokit/rest": "^22.0.0",
     "@types/node": "^24.10.1",
-    "dedent": "^1.7.0",
+    "dedent": "^1.7.1",
     "markdown-escape": "^2.0.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",

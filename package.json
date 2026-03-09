@@ -20,7 +20,7 @@
   "devDependencies": {
     "@octokit/plugin-throttling": "^11.0.3",
     "@octokit/rest": "^22.0.0",
-    "@types/node": "^25.3.5",
+    "@types/node": "^25.4.0",
     "dedent": "^1.7.2",
     "markdown-escape": "^2.0.0",
     "prettier": "^3.8.1",

@@ -26,6 +26,6 @@
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "web-features": "^3.25.0"
+    "web-features": "^3.26.0"
   }
 }

@@ -24,7 +24,7 @@
     "dedent": "^1.7.2",
     "markdown-escape": "^2.0.0",
     "prettier": "^3.8.3",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "web-features": "^3.29.0"
   }

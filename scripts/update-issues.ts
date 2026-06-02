@@ -260,7 +260,10 @@ async function update() {
         // know about it. However, if the issues are identical we can just
         // ignore the duplicates.
         const existingIssue = openIssues.get(id);
-        if (existingIssue.title === issue.title && existingIssue.body === issue.body) {
+        if (
+          existingIssue.title === issue.title &&
+          existingIssue.body === issue.body
+        ) {
           console.warn(`Duplicate issue for ${id}: ${issue.html_url}`);
           continue;
         }

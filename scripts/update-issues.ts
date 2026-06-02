@@ -31,14 +31,14 @@ interface VendorPosition {
   vendor: "mozilla" | "webkit";
   url: string;
   position:
-  | ""
-  | "positive"
-  | "support"
-  | "oppose"
-  | "defer"
-  | "neutral"
-  | "negative"
-  | "blocked";
+    | ""
+    | "positive"
+    | "support"
+    | "oppose"
+    | "defer"
+    | "neutral"
+    | "negative"
+    | "blocked";
 }
 
 type MappingsData = Record<
@@ -91,7 +91,9 @@ async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
     const connection = result.repository.issues;
 
     const normalizedNodes = connection.nodes.map((node: any) => {
-      const upvoteGroup = node.reactionGroups?.find((g: any) => g.content === "THUMBS_UP");
+      const upvoteGroup = node.reactionGroups?.find(
+        (g: any) => g.content === "THUMBS_UP",
+      );
       const upvotes = upvoteGroup ? upvoteGroup.users.totalCount : 0;
       return {
         number: node.number,

@@ -55,19 +55,14 @@ interface IterateIssuesParams {
   repo: string;
 }
 
-async function* iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
-  for await (const response of octokit.paginate.iterator(
-    octokit.rest.issues.listForRepo,
-    {
-      ...params,
-      labels: ["feature"],
-      per_page: 100,
-    },
-  )) {
-    for (const issue of response.data) {
-      yield issue;
-    }
-  }
+async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
+  const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+    ...params,
+    labels: "feature",
+    per_page: 100,
+    state: "open",
+  });
+  return issues;
 }
 
 const dateFormat = new Intl.DateTimeFormat("en", {
@@ -195,6 +190,7 @@ async function update() {
   // Based on https://github.com/octokit/plugin-throttling.js/blob/main/README.md
   const octokit = new ThrottlingOctokit({
     auth: process.env.GITHUB_TOKEN,
+    log: console,
     throttle: {
       onRateLimit: (retryAfter, options, octokit, retryCount) => {
         octokit.log.warn(
@@ -207,11 +203,16 @@ async function update() {
           return true;
         }
       },
-      onSecondaryRateLimit: (retryAfter, options, octokit) => {
-        // does not retry, only logs a warning
+      onSecondaryRateLimit: (retryAfter, options, octokit, retryCount) => {
         octokit.log.warn(
           `SecondaryRateLimit detected for request ${options.method} ${options.url}`,
         );
+
+        if (retryCount < 1) {
+          // only retries once
+          octokit.log.info(`Retrying after ${retryAfter} seconds!`);
+          return true;
+        }
       },
     },
   });
@@ -227,7 +228,10 @@ async function update() {
   // Iterate existing issues and create a map from web-features ID to
   // the issue. This is in order to not create duplicate issues.
   const openIssues = new Map<string, any>();
-  for await (const issue of iterateIssues(octokit, params)) {
+  const issues = await iterateIssues(octokit, params);
+  console.log(`Fetched ${issues.length} open issues.`);
+
+  for (const issue of issues) {
     if (typeof issue === "string") {
       throw Error(`Unexpected issue type (string)`);
     }
@@ -252,6 +256,14 @@ async function update() {
         id = features[id].redirect_target;
       }
       if (openIssues.has(id)) {
+        // If there are multiple issues for the same feature, we should probably
+        // know about it. However, if the issues are identical we can just
+        // ignore the duplicates.
+        const existingIssue = openIssues.get(id);
+        if (existingIssue.title === issue.title && existingIssue.body === issue.body) {
+          console.warn(`Duplicate issue for ${id}: ${issue.html_url}`);
+          continue;
+        }
         throw new Error(
           `Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`,
         );
@@ -259,6 +271,8 @@ async function update() {
       openIssues.set(id, issue);
     }
   }
+
+  console.log(`Mapped ${openIssues.size} issues to feature IDs.`);
 
   // Sort features by earliest release date in any browser, using subsequent shipping
   // dates as tie breakers. Features that aren't shipped in any browser come last.

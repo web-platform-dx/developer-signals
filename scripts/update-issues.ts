@@ -56,12 +56,61 @@ interface IterateIssuesParams {
 }
 
 async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
-  const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
-    ...params,
-    labels: "feature",
-    per_page: 100,
-    state: "open",
-  });
+  const query = `
+    query($owner: String!, $repo: String!, $cursor: String) {
+      repository(owner: $owner, name: $repo) {
+        issues(first: 100, states: OPEN, labels: ["feature"], after: $cursor) {
+          nodes {
+            number
+            title
+            body
+            createdAt
+            url
+            reactionGroups {
+              content
+              users {
+                totalCount
+              }
+            }
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
+          }
+        }
+      }
+    }
+  `;
+
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  const issues: any[] = [];
+
+  while (hasNextPage) {
+    const result: any = await octokit.graphql(query, { ...params, cursor });
+    const connection = result.repository.issues;
+
+    const normalizedNodes = connection.nodes.map((node: any) => {
+      const upvoteGroup = node.reactionGroups?.find(
+        (g: any) => g.content === "THUMBS_UP",
+      );
+      const upvotes = upvoteGroup ? upvoteGroup.users.totalCount : 0;
+      return {
+        number: node.number,
+        title: node.title,
+        body: node.body,
+        html_url: node.url,
+        reactions: {
+          "+1": upvotes,
+        },
+      };
+    });
+
+    issues.push(...normalizedNodes);
+    cursor = connection.pageInfo.endCursor;
+    hasNextPage = connection.pageInfo.hasNextPage;
+  }
+
   return issues;
 }
 
@@ -256,20 +305,8 @@ async function update() {
         id = features[id].redirect_target;
       }
       if (openIssues.has(id)) {
-        // If there are multiple issues for the same feature, we should probably
-        // know about it. However, if the issues are identical we can just
-        // ignore the duplicates.
-        const existingIssue = openIssues.get(id);
-        if (
-          existingIssue.title === issue.title &&
-          existingIssue.body === issue.body
-        ) {
-          console.warn(`Duplicate issue for ${id}: ${issue.html_url}`);
-          continue;
-        }
-        throw new Error(
-          `Multiple issues for ${id}: ${openIssues.get(id).html_url} and ${issue.html_url}`,
-        );
+        console.warn(`Duplicate issue found for ${id}: ${issue.html_url}`);
+        continue;
       }
       openIssues.set(id, issue);
     }

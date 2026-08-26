@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { browsers, features } from "web-features";
+import { browsers, features, groups } from "web-features";
 import dedent from "dedent";
 
 import { Octokit } from "@octokit/rest";
@@ -74,6 +74,11 @@ async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
             body
             createdAt
             url
+            labels(first: 100) {
+              nodes {
+                name
+              }
+            }
             reactionGroups {
               content
               users {
@@ -103,11 +108,13 @@ async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
         (g: any) => g.content === "THUMBS_UP",
       );
       const upvotes = upvoteGroup ? upvoteGroup.users.totalCount : 0;
+      const labels = node.labels?.nodes?.map((label: any) => label.name) ?? [];
       return {
         number: node.number,
         title: node.title,
         body: node.body,
         html_url: node.url,
+        labels,
         reactions: {
           "+1": upvotes,
         },
@@ -219,6 +226,33 @@ function issueBody(
 
     <!-- web-features:${id} -->
   `;
+}
+
+function getGroupLabels(data: (typeof features)[string]): string[] {
+  if (data.kind !== "feature" || !data.group) {
+    return [];
+  }
+
+  const groupNames = new Set<string>();
+
+  for (const groupId of data.group) {
+    const visited = new Set<string>();
+    let currentId: string | undefined = groupId;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const groupData: { name: string; parent?: string } | undefined =
+        groups[currentId as keyof typeof groups];
+      if (groupData) {
+        groupNames.add(groupData.name);
+        currentId = groupData.parent;
+      } else {
+        groupNames.add(currentId);
+        break;
+      }
+    }
+  }
+
+  return Array.from(groupNames);
 }
 
 async function getMappingsData(): Promise<MappingsData> {
@@ -409,6 +443,7 @@ async function update() {
     const title = data.name;
     const body = issueBody(id, data, mappings[id]?.["mdn-docs"]);
     const issue = openIssues.get(id);
+    const groupLabels = getGroupLabels(data);
 
     if (data.status.baseline && !issue) {
       console.log(
@@ -418,20 +453,35 @@ async function update() {
     }
 
     if (issue) {
-      if (issue.title !== title || issue.body !== body) {
+      const missingLabels = groupLabels.filter(
+        (label) => !issue.labels.includes(label),
+      );
+      const titleChanged = issue.title !== title;
+      const bodyChanged = issue.body !== body;
+      const labelsChanged = missingLabels.length > 0;
+
+      if (titleChanged || bodyChanged || labelsChanged) {
         // Update the issue. This might happen as a result of a change in
-        // web-features or if we change the format of the issue body.
+        // web-features or if we change the format of the issue body or labels.
         if (dryRun) {
           console.log(`Dry run. Would update issue for ${id}.`);
         } else {
           console.log(`Updating issue for ${id}.`);
-          await octokit.rest.issues.update({
-            ...params,
-            issue_number: issue.number,
-            title,
-            body,
-            // Labels are not updated to avoid removing labels added manually.
-          });
+          if (titleChanged || bodyChanged) {
+            await octokit.rest.issues.update({
+              ...params,
+              issue_number: issue.number,
+              title,
+              body,
+            });
+          }
+          if (labelsChanged) {
+            await octokit.rest.issues.addLabels({
+              ...params,
+              issue_number: issue.number,
+              labels: missingLabels,
+            });
+          }
         }
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
@@ -484,7 +534,7 @@ async function update() {
         ...params,
         title,
         body,
-        labels: ["feature"],
+        labels: ["feature", ...groupLabels],
       });
       manifest.set(id, {
         url: response.data.html_url,

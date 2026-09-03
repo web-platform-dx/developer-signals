@@ -228,6 +228,10 @@ function issueBody(
   `;
 }
 
+function sanitizeGroupName(name: string): string {
+  return name.replaceAll(",", "");
+}
+
 function getGroupLabels(data: (typeof features)[string]): string[] {
   if (data.kind !== "feature" || !data.group) {
     return [];
@@ -243,10 +247,10 @@ function getGroupLabels(data: (typeof features)[string]): string[] {
       const groupData: { name: string; parent?: string } | undefined =
         groups[currentId as keyof typeof groups];
       if (groupData) {
-        groupNames.add(groupData.name.replaceAll(",", ""));
+        groupNames.add(sanitizeGroupName(groupData.name));
         currentId = groupData.parent;
       } else {
-        groupNames.add(currentId.replaceAll(",", ""));
+        groupNames.add(sanitizeGroupName(currentId));
         break;
       }
     }

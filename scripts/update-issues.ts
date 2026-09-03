@@ -243,10 +243,10 @@ function getGroupLabels(data: (typeof features)[string]): string[] {
       const groupData: { name: string; parent?: string } | undefined =
         groups[currentId as keyof typeof groups];
       if (groupData) {
-        groupNames.add(groupData.name);
+        groupNames.add(groupData.name.replaceAll(",", ""));
         currentId = groupData.parent;
       } else {
-        groupNames.add(currentId);
+        groupNames.add(currentId.replaceAll(",", ""));
         break;
       }
     }

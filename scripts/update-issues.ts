@@ -58,20 +58,39 @@ type MappingsData = Record<
 
 const positionsToIgnore: VendorPosition["position"][] = ["negative", "oppose"];
 
+interface Issue {
+  number: number;
+  title: string;
+  body: string;
+  state: "OPEN" | "CLOSED";
+  stateReason?: string | null;
+  createdAt: string;
+  html_url: string;
+  labels: string[];
+  reactions: {
+    "+1": number;
+  };
+}
+
 interface IterateIssuesParams {
   owner: string;
   repo: string;
 }
 
-async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
+async function iterateIssues(
+  octokit: Octokit,
+  params: IterateIssuesParams,
+): Promise<Issue[]> {
   const query = `
     query($owner: String!, $repo: String!, $cursor: String) {
       repository(owner: $owner, name: $repo) {
-        issues(first: 100, states: OPEN, labels: ["feature"], after: $cursor) {
+        issues(first: 100, states: [OPEN, CLOSED], labels: ["feature"], after: $cursor) {
           nodes {
             number
             title
             body
+            state
+            stateReason
             createdAt
             url
             labels(first: 100) {
@@ -97,13 +116,13 @@ async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
 
   let cursor: string | null = null;
   let hasNextPage = true;
-  const issues: any[] = [];
+  const issues: Issue[] = [];
 
   while (hasNextPage) {
     const result: any = await octokit.graphql(query, { ...params, cursor });
     const connection = result.repository.issues;
 
-    const normalizedNodes = connection.nodes.map((node: any) => {
+    const normalizedNodes: Issue[] = connection.nodes.map((node: any) => {
       const upvoteGroup = node.reactionGroups?.find(
         (g: any) => g.content === "THUMBS_UP",
       );
@@ -113,6 +132,9 @@ async function iterateIssues(octokit: Octokit, params: IterateIssuesParams) {
         number: node.number,
         title: node.title,
         body: node.body,
+        state: node.state,
+        stateReason: node.stateReason ?? null,
+        createdAt: node.createdAt,
         html_url: node.url,
         labels,
         reactions: {
@@ -342,9 +364,9 @@ async function update() {
 
   // Iterate existing issues and create a map from web-features ID to
   // the issue. This is in order to not create duplicate issues.
-  const openIssues = new Map<string, any>();
+  const existingIssues = new Map<string, Issue>();
   const issues = await iterateIssues(octokit, params);
-  console.log(`Fetched ${issues.length} open issues.`);
+  console.log(`Fetched ${issues.length} issues.`);
 
   for (const issue of issues) {
     if (typeof issue === "string") {
@@ -370,15 +392,65 @@ async function update() {
       if (features[id]?.kind === "moved") {
         id = features[id].redirect_target;
       }
-      if (openIssues.has(id)) {
-        console.warn(`Duplicate issue found for ${id}: ${issue.html_url}`);
+      if (existingIssues.has(id)) {
+        const existing = existingIssues.get(id)!;
+        let canonical: Issue;
+        let duplicate: Issue;
+
+        const existingVotes = existing.reactions["+1"];
+        const currentVotes = issue.reactions["+1"];
+
+        if (existingVotes !== currentVotes) {
+          canonical = existingVotes > currentVotes ? existing : issue;
+          duplicate = existingVotes > currentVotes ? issue : existing;
+        } else {
+          const existingDate = new Date(existing.createdAt).getTime();
+          const currentDate = new Date(issue.createdAt).getTime();
+          if (existingDate !== currentDate) {
+            canonical = existingDate < currentDate ? existing : issue;
+            duplicate = existingDate < currentDate ? issue : existing;
+          } else {
+            canonical = existing.number < issue.number ? existing : issue;
+            duplicate = existing.number < issue.number ? issue : existing;
+          }
+        }
+
+        console.warn(
+          `Duplicate issue found for ${id}: preferring #${canonical.number} over #${duplicate.number}`,
+        );
+
+        if (duplicate.state === "OPEN") {
+          if (dryRun) {
+            console.log(
+              `Dry run. Would close duplicate issue #${duplicate.number} for ${id} with comment linking to #${canonical.number}.`,
+            );
+          } else {
+            console.log(
+              `Closing duplicate issue #${duplicate.number} for ${id} with comment linking to #${canonical.number}.`,
+            );
+            await octokit.rest.issues.createComment({
+              ...params,
+              issue_number: duplicate.number,
+              body: dedent`
+                This issue was created in error as a duplicate of #${canonical.number}. Please refer to #${canonical.number} for discussion and developer signals on this feature.
+              `,
+            });
+            await octokit.rest.issues.update({
+              ...params,
+              issue_number: duplicate.number,
+              state: "closed",
+            });
+          }
+        }
+
+        existingIssues.set(id, canonical);
         continue;
       }
-      openIssues.set(id, issue);
+      existingIssues.set(id, issue);
     }
   }
 
-  console.log(`Mapped ${openIssues.size} issues to feature IDs.`);
+  console.log(`Mapped ${existingIssues.size} issues to feature IDs.`);
 
   // Sort features by earliest release date in any browser, using subsequent shipping
   // dates as tie breakers. Features that aren't shipped in any browser come last.
@@ -389,7 +461,7 @@ async function update() {
         // Normal feature, handled below.
         break;
       case "moved":
-        // Moves are handled when populating the openIssues map.
+        // Moves are handled when populating the existingIssues map.
         continue;
       case "split":
         // TODO: Handle split features. The new features will be automatically
@@ -446,13 +518,47 @@ async function update() {
 
     const title = data.name;
     const body = issueBody(id, data, mappings[id]?.["mdn-docs"]);
-    const issue = openIssues.get(id);
+    const issue = existingIssues.get(id);
     const groupLabels = getGroupLabels(data);
 
-    if (data.status.baseline && !issue) {
-      console.log(
-        `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
-      );
+    if (data.status.baseline) {
+      if (!issue || issue.state === "CLOSED") {
+        console.log(
+          `Skipping ${id}. Reason: Baseline since ${data.status.baseline_low_date}`,
+        );
+        continue;
+      }
+
+      // The feature has reached Baseline status since this issue was opened, so we should close it.
+      const baselineDateStr = data.status.baseline_low_date
+        ? ` on ${dateFormat.format(new Date(data.status.baseline_low_date))}`
+        : "";
+      const closeComment = dedent`
+        This feature reached Baseline status${baselineDateStr}, which means it's now fully supported across browsers. Developer signals are no longer needed for this feature, so this issue can be closed.
+
+        Thank you to everyone who provided feedback! 🎉
+      `;
+
+      if (dryRun) {
+        console.log(`Dry run. Would close issue for ${id} with comment.`);
+      } else {
+        console.log(`Closing issue for ${id} with comment.`);
+
+        // Post the comment
+        await octokit.rest.issues.createComment({
+          ...params,
+          issue_number: issue.number,
+          body: closeComment,
+        });
+
+        // Close the issue
+        await octokit.rest.issues.update({
+          ...params,
+          issue_number: issue.number,
+          state: "closed",
+        });
+      }
+
       continue;
     }
 
@@ -464,7 +570,46 @@ async function update() {
       const bodyChanged = issue.body !== body;
       const labelsChanged = missingLabels.length > 0;
 
-      if (titleChanged || bodyChanged || labelsChanged) {
+      if (issue.state === "CLOSED") {
+        if (issue.stateReason && issue.stateReason !== "COMPLETED") {
+          console.log(
+            `Skipping ${id}. Reason: issue #${issue.number} was closed as ${issue.stateReason}`,
+          );
+          continue;
+        }
+
+        if (dryRun) {
+          console.log(`Dry run. Would reopen issue for ${id} with comment.`);
+        } else {
+          console.log(`Reopening issue for ${id} with comment.`);
+
+          const reopenComment = dedent`
+            This feature is no longer considered Baseline (for example, browser support data was updated or reverted). This issue has been reopened to resume collecting developer signals.
+          `;
+
+          await octokit.rest.issues.createComment({
+            ...params,
+            issue_number: issue.number,
+            body: reopenComment,
+          });
+
+          await octokit.rest.issues.update({
+            ...params,
+            issue_number: issue.number,
+            state: "open",
+            title,
+            body,
+          });
+
+          if (missingLabels.length > 0) {
+            await octokit.rest.issues.addLabels({
+              ...params,
+              issue_number: issue.number,
+              labels: missingLabels,
+            });
+          }
+        }
+      } else if (titleChanged || bodyChanged || labelsChanged) {
         // Update the issue. This might happen as a result of a change in
         // web-features or if we change the format of the issue body or labels.
         if (dryRun) {
@@ -489,37 +634,6 @@ async function update() {
         }
       } else {
         console.log(`Issue for ${id} is up-to-date.`);
-      }
-
-      if (data.status.baseline) {
-        // The feature has reached Baseline status since this issue was opened, so we should close it.
-        const closeComment = dedent`
-          This feature reached Baseline status on ${dateFormat.format(new Date(data.status.baseline_low_date))}, which means it's now fully supported across browsers. Developer signals are no longer needed for this feature, so this issue can be closed.
-
-          Thank you to everyone who provided feedback! 🎉
-        `;
-
-        if (dryRun) {
-          console.log(`Dry run. Would close issue for ${id} with comment.`);
-        } else {
-          console.log(`Closing issue for ${id} with comment.`);
-
-          // Post the comment
-          await octokit.rest.issues.createComment({
-            ...params,
-            issue_number: issue.number,
-            body: closeComment,
-          });
-
-          // Close the issue
-          await octokit.rest.issues.update({
-            ...params,
-            issue_number: issue.number,
-            state: "closed",
-          });
-        }
-
-        continue;
       }
 
       manifest.set(id, {
